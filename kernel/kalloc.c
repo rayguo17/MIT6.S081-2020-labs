@@ -55,7 +55,7 @@ kfree(void *pa)
   memset(pa, 1, PGSIZE);
 
   r = (struct run*)pa;
-
+  //put the page to the begining
   acquire(&kmem.lock);
   r->next = kmem.freelist;
   kmem.freelist = r;
@@ -79,4 +79,35 @@ kalloc(void)
   if(r)
     memset((char*)r, 5, PGSIZE); // fill with junk
   return (void*)r;
+}
+
+uint64
+kcheck(void)
+{
+  uint64 pg_num=0;
+  struct run *r;
+  //printf("before acquireing!\n");
+  acquire(&kmem.lock);
+  r=kmem.freelist;
+  if(!r){
+    release(&kmem.lock);
+    return 0;
+  }
+  r=r->next;
+  //printf("accesing r next!\n");
+  pg_num = 1;
+  while (r!=kmem.freelist)
+  {
+    pg_num+=1;
+    r= r->next;
+    if(r){
+      continue;
+    }else{
+      break;
+    }
+  }
+  //printf("page_num: %d\n",pg_num);
+  release(&kmem.lock);
+
+  return pg_num*PGSIZE;
 }

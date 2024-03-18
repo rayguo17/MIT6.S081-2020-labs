@@ -42,7 +42,7 @@ void
 testmem() {
   struct sysinfo info;
   uint64 n = countfree();
-  
+  //printf("freemem: %d",n);
   sinfo(&info);
 
   if (info.freemem!= n) {
