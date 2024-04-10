@@ -441,14 +441,35 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
   }
 }
 
-void vmprint_recursive(pagetable_t tp)
+void vmprint_recursive(pagetable_t tp, int level)
 {
-  
+  char buffer[9];
+  // should dive into each pte
+  for(int i=0;i<512;i++){
+
+    pte_t pte = tp[i];
+    // how to know which pte is valid?
+    if((pte & PTE_V)){
+      // this PTE points to a lower-level page table.
+      //try to print first and then 
+      memset(buffer,0,9);
+      for(int j=0;j<level;j++){
+        buffer[j*3] = '.';
+        buffer[j*3+1]='.';
+        if (j<level-1)
+          buffer[j*3+2]=' ';
+      }
+      uint64 child = PTE2PA(pte);
+      printf("%s%d: pte %p pa %p\n",buffer,i,pte,child);
+      if(level<2)
+        vmprint_recursive((pagetable_t)child,level+1); 
+    }
+  }
 }
 
 void vmprint(pagetable_t tp)
 {
   printf("page table %p\n",tp);
-  vmprint_recursive(tp);
+  vmprint_recursive(tp,0);
 }
 
