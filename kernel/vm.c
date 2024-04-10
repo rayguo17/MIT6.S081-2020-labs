@@ -440,3 +440,15 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
     return -1;
   }
 }
+
+void vmprint_recursive(pagetable_t tp)
+{
+  
+}
+
+void vmprint(pagetable_t tp)
+{
+  printf("page table %p\n",tp);
+  vmprint_recursive(tp);
+}
+
