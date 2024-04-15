@@ -22,7 +22,7 @@ main()
     kinit();         // physical page allocator
     kvminit();       // create kernel page table
     kvminithart();   // turn on paging
-    procinit();      // process table
+    //procinit();      // process table
     trapinit();      // trap vectors
     trapinithart();  // install kernel trap vector
     plicinit();      // set up interrupt controller
@@ -34,7 +34,8 @@ main()
 #ifdef LAB_NET
     pci_init();
     sockinit();
-#endif    
+#endif   
+    printf("userinit\n");
     userinit();      // first user process
     __sync_synchronize();
     started = 1;

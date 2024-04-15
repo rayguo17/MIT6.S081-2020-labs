@@ -115,6 +115,10 @@ found:
 
   // An empty user page table.
   p->pagetable = proc_pagetable(p);
+  printf("creating process kernel page table\n");
+  p->kpage_table = kpminit();
+  printf("done create process kernel page table\n");
+  p->kstack = kpmstack(p->kpage_table);
   if(p->pagetable == 0){
     freeproc(p);
     release(&p->lock);
@@ -141,6 +145,7 @@ freeproc(struct proc *p)
   p->trapframe = 0;
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
+  
   p->pagetable = 0;
   p->sz = 0;
   p->pid = 0;
@@ -151,6 +156,7 @@ freeproc(struct proc *p)
   p->xstate = 0;
   p->state = UNUSED;
 }
+
 
 // Create a user page table for a given process,
 // with no user memory, but with trampoline pages.
@@ -214,13 +220,14 @@ userinit(void)
   struct proc *p;
 
   p = allocproc();
+  printf("userinit allocproc done!\n");
   initproc = p;
   
   // allocate one user page and copy init's instructions
   // and data into it.
   uvminit(p->pagetable, initcode, sizeof(initcode));
   p->sz = PGSIZE;
-
+  printf("init code copy done\n");
   // prepare for the very first "return" from kernel to user.
   p->trapframe->epc = 0;      // user program counter
   p->trapframe->sp = PGSIZE;  // user stack pointer
@@ -458,7 +465,7 @@ scheduler(void)
 {
   struct proc *p;
   struct cpu *c = mycpu();
-  
+  //printf("running in scheduler\n");
   c->proc = 0;
   for(;;){
     // Avoid deadlock by ensuring that devices can interrupt.
@@ -467,16 +474,20 @@ scheduler(void)
     int found = 0;
     for(p = proc; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
+      //printf("schedule: %d\n",p-proc);
       if(p->state == RUNNABLE) {
         // Switch to chosen process.  It is the process's job
         // to release its lock and then reacquire it
         // before jumping back to us.
         p->state = RUNNING;
         c->proc = p;
+        //kpminithart(p->kpage_table);
         swtch(&c->context, &p->context);
-
+        kvminithart();
         // Process is done running for now.
         // It should have changed its p->state before coming back.
+        // kvminithart();
+        //printf("switch back from kvm\n");
         c->proc = 0;
 
         found = 1;

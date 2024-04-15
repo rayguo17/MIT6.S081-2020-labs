@@ -56,6 +56,40 @@ kvminithart()
   sfence_vma();
 }
 
+void kpminithart(pagetable_t page_table)
+{
+  w_satp(MAKE_SATP(page_table));
+  sfence_vma();
+}
+
+pagetable_t
+kpminit()
+{
+  pagetable_t k_pagetable;
+  k_pagetable = (pagetable_t)kalloc();
+  memset(k_pagetable,0,PGSIZE);
+  mappages(k_pagetable,UART0, PGSIZE, UART0, PTE_R | PTE_W);
+  vmprint(k_pagetable);
+  mappages(k_pagetable,VIRTIO0, PGSIZE,VIRTIO0, PTE_R | PTE_W);
+  mappages(k_pagetable,CLINT, 0x10000, CLINT, PTE_R | PTE_W);
+  mappages(k_pagetable,PLIC, 0x400000, PLIC, PTE_R | PTE_W);
+  mappages(k_pagetable,KERNBASE, (uint64)etext-KERNBASE, KERNBASE, PTE_R | PTE_X);
+  mappages(k_pagetable,(uint64)etext, PHYSTOP-(uint64)etext, (uint64)etext, PTE_R | PTE_W);
+  mappages(k_pagetable,TRAMPOLINE, PGSIZE, (uint64)trampoline, PTE_R | PTE_X);
+  return k_pagetable;
+}
+
+uint64 kpmstack(pagetable_t page_table)
+{
+  uint64 va;
+  char *pa;
+  pa = kalloc();
+  va = KSTACK((int)0);
+  mappages(page_table,va,PGSIZE,(uint64)pa,PTE_R | PTE_W);
+  return va;
+}
+
+
 // Return the address of the PTE in page table pagetable
 // that corresponds to virtual address va.  If alloc!=0,
 // create any required page-table pages.
@@ -131,7 +165,7 @@ kvmpa(uint64 va)
   uint64 off = va % PGSIZE;
   pte_t *pte;
   uint64 pa;
-  
+  //printf("va: %p",va);
   pte = walk(kernel_pagetable, va, 0);
   if(pte == 0)
     panic("kvmpa");
@@ -150,7 +184,7 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
 {
   uint64 a, last;
   pte_t *pte;
-
+  //printf("mapping: %p\n",va);
   a = PGROUNDDOWN(va);
   last = PGROUNDDOWN(va + size - 1);
   for(;;){
