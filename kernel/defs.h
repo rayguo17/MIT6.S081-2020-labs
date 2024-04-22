@@ -167,6 +167,7 @@ pagetable_t     uvmcreate(void);
 pagetable_t     kpminit(void);
 uint64          kpmstack(pagetable_t);
 void            kpminithart(pagetable_t);
+void            kpmclear(pagetable_t ,uint64);
 void            uvminit(pagetable_t, uchar *, uint);
 uint64          uvmalloc(pagetable_t, uint64, uint64);
 uint64          uvmdealloc(pagetable_t, uint64, uint64);

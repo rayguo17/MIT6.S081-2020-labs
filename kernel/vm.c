@@ -5,7 +5,8 @@
 #include "riscv.h"
 #include "defs.h"
 #include "fs.h"
-
+#include "spinlock.h"
+#include "proc.h"
 /*
  * the kernel's page table.
  */
@@ -68,14 +69,21 @@ kpminit()
   pagetable_t k_pagetable;
   k_pagetable = (pagetable_t)kalloc();
   memset(k_pagetable,0,PGSIZE);
+  //vmprint(k_pagetable);
   mappages(k_pagetable,UART0, PGSIZE, UART0, PTE_R | PTE_W);
-  vmprint(k_pagetable);
+  //vmprint(k_pagetable);
   mappages(k_pagetable,VIRTIO0, PGSIZE,VIRTIO0, PTE_R | PTE_W);
+  //vmprint(k_pagetable);
   mappages(k_pagetable,CLINT, 0x10000, CLINT, PTE_R | PTE_W);
+  //vmprint(k_pagetable);
   mappages(k_pagetable,PLIC, 0x400000, PLIC, PTE_R | PTE_W);
+  //vmprint(k_pagetable);
   mappages(k_pagetable,KERNBASE, (uint64)etext-KERNBASE, KERNBASE, PTE_R | PTE_X);
+  //vmprint(k_pagetable);
   mappages(k_pagetable,(uint64)etext, PHYSTOP-(uint64)etext, (uint64)etext, PTE_R | PTE_W);
+  //vmprint(k_pagetable);
   mappages(k_pagetable,TRAMPOLINE, PGSIZE, (uint64)trampoline, PTE_R | PTE_X);
+  //vmprint(k_pagetable);
   return k_pagetable;
 }
 
@@ -88,6 +96,8 @@ uint64 kpmstack(pagetable_t page_table)
   mappages(page_table,va,PGSIZE,(uint64)pa,PTE_R | PTE_W);
   return va;
 }
+
+
 
 
 // Return the address of the PTE in page table pagetable
@@ -166,7 +176,12 @@ kvmpa(uint64 va)
   pte_t *pte;
   uint64 pa;
   //printf("va: %p",va);
-  pte = walk(kernel_pagetable, va, 0);
+  pagetable_t page_table;
+  if(myproc()==0)
+    page_table = kernel_pagetable;
+  else
+    page_table = myproc()->kpage_table;
+  pte = walk(page_table, va, 0);
   if(pte == 0)
     panic("kvmpa");
   if((*pte & PTE_V) == 0)
@@ -222,6 +237,7 @@ uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
       panic("uvmunmap: not a leaf");
     if(do_free){
       uint64 pa = PTE2PA(*pte);
+      
       kfree((void*)pa);
     }
     *pte = 0;
@@ -317,6 +333,7 @@ freewalk(pagetable_t pagetable)
       freewalk((pagetable_t)child);
       pagetable[i] = 0;
     } else if(pte & PTE_V){
+
       panic("freewalk: leaf");
     }
   }
@@ -332,6 +349,20 @@ uvmfree(pagetable_t pagetable, uint64 sz)
     uvmunmap(pagetable, 0, PGROUNDUP(sz)/PGSIZE, 1);
   freewalk(pagetable);
 }
+
+void kpmclear(pagetable_t page_table,uint64 stack_va)
+{
+  uvmunmap(page_table,UART0,1,0);
+  uvmunmap(page_table,VIRTIO0,1,0);
+  uvmunmap(page_table,CLINT,0x10000/PGSIZE,0);
+  uvmunmap(page_table,PLIC,0x400000/PGSIZE,0);
+  uvmunmap(page_table,KERNBASE,((uint64)etext-KERNBASE)/PGSIZE,0);
+  uvmunmap(page_table,(uint64)etext,(PHYSTOP-(uint64)etext)/PGSIZE,0);
+  uvmunmap(page_table,TRAMPOLINE,1,0);
+  uvmunmap(page_table,stack_va,1,1);
+  freewalk(page_table);
+}
+
 
 // Given a parent process's page table, copy
 // its memory into a child's page table.

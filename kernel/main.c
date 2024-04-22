@@ -35,7 +35,6 @@ main()
     pci_init();
     sockinit();
 #endif   
-    printf("userinit\n");
     userinit();      // first user process
     __sync_synchronize();
     started = 1;

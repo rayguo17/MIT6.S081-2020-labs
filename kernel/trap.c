@@ -89,6 +89,7 @@ usertrap(void)
 void
 usertrapret(void)
 {
+  //printf("in usertrparet: %d\n",myproc()->pid);
   struct proc *p = myproc();
 
   // we're about to switch the destination of traps from
@@ -126,6 +127,7 @@ usertrapret(void)
   // and switches to user mode with sret.
   uint64 fn = TRAMPOLINE + (userret - trampoline);
   ((void (*)(uint64,uint64))fn)(TRAPFRAME, satp);
+  printf("done setup %d\n",myproc()->pid);
 }
 
 // interrupts and exceptions from kernel code go here via kernelvec,
