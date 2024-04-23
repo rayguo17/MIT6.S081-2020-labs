@@ -283,7 +283,8 @@ uvmalloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
 
   if(newsz < oldsz)
     return oldsz;
-
+  if(newsz >= PLIC)
+    panic("USER Memory exceed PLIC!");
   oldsz = PGROUNDUP(oldsz);
   for(a = oldsz; a < newsz; a += PGSIZE){
     mem = kalloc();
@@ -363,7 +364,76 @@ void kpmclear(pagetable_t page_table,uint64 stack_va)
   freewalk(page_table);
 }
 
+void kpmclearuser(pagetable_t page_table, uint64 sz)
+{
+  // only need to dereference
+  if (sz>0)
+    uvmunmap(page_table,0,PGROUNDUP(sz)/PGSIZE,0);
+  
+}
 
+uint64 kpmcopy(pagetable_t src_pagetable,pagetable_t target_pagetable,uint64 sz)
+{
+  pte_t *pte;
+  uint64 pa, i;
+  uint flags;
+  for (i=0;i<sz;i+=PGSIZE){
+    if((pte = walk(target_pagetable,i,0)))
+      continue;
+    if((pte=walk(src_pagetable,i,0))==0)
+      panic("uvmcopy: pte should exist");
+    
+    if((*pte & PTE_V) == 0)
+      panic("uvmcopy: page not present");
+    pa = PTE2PA(*pte);
+    flags = PTE_FLAGS(*pte);
+    if(mappages(target_pagetable,i,PGSIZE,pa,flags)!=0){
+      goto err;
+    }
+  }
+
+  return 0;
+  err:
+    uvmunmap(target_pagetable,0,i/PGSIZE,1);
+    return -1;
+}
+
+uint64 kpmshrink(pagetable_t page_table, uint64 sz)
+{
+  pte_t *pte;
+  uint64 va;
+  va = PGROUNDUP(sz);
+  while (1)
+  {
+    if((pte = walk(page_table,va,0))==0)
+      break;
+    uvmunmap(page_table,va,1,0);
+    va += PGSIZE;
+  }
+  return 0;
+}
+
+uint64 kpmclearemptypte(pagetable_t page_table)
+{
+  //TODO: Not done yet minor efficient.
+  for (int i=0;i<512;i++){
+    pte_t pte = page_table[i];
+    if((pte & PTE_V) && (pte & (PTE_R|PTE_W|PTE_X))){
+      //this is child
+      return 1;
+    }else if(pte & PTE_V){
+      //this is sub pagetable
+      uint64 child = PTE2PA(pte);
+
+      if(kpmclearemptypte((pagetable_t)child)==0){
+        //contain no valid child, 
+        kfree((void *)child);
+      }    
+    }
+
+  }
+  return 0;
+}
 // Given a parent process's page table, copy
 // its memory into a child's page table.
 // Copies both the page table and the
@@ -444,23 +514,24 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 int
 copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 {
-  uint64 n, va0, pa0;
+  return copyin_new(pagetable,dst,srcva,len);
+  // uint64 n, va0, pa0;
 
-  while(len > 0){
-    va0 = PGROUNDDOWN(srcva);
-    pa0 = walkaddr(pagetable, va0);
-    if(pa0 == 0)
-      return -1;
-    n = PGSIZE - (srcva - va0);
-    if(n > len)
-      n = len;
-    memmove(dst, (void *)(pa0 + (srcva - va0)), n);
+  // while(len > 0){
+  //   va0 = PGROUNDDOWN(srcva);
+  //   pa0 = walkaddr(pagetable, va0);
+  //   if(pa0 == 0)
+  //     return -1;
+  //   n = PGSIZE - (srcva - va0);
+  //   if(n > len)
+  //     n = len;
+  //   memmove(dst, (void *)(pa0 + (srcva - va0)), n);
 
-    len -= n;
-    dst += n;
-    srcva = va0 + PGSIZE;
-  }
-  return 0;
+  //   len -= n;
+  //   dst += n;
+  //   srcva = va0 + PGSIZE;
+  //}
+  //return 0;
 }
 
 // Copy a null-terminated string from user to kernel.

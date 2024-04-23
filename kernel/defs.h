@@ -164,10 +164,14 @@ uint64          kvmpa(uint64);
 void            kvmmap(uint64, uint64, uint64, int);
 int             mappages(pagetable_t, uint64, uint64, uint64, int);
 pagetable_t     uvmcreate(void);
-pagetable_t     kpminit(void);
-uint64          kpmstack(pagetable_t);
-void            kpminithart(pagetable_t);
-void            kpmclear(pagetable_t ,uint64);
+pagetable_t     kpminit(void);             // initial kernel mapping
+uint64          kpmstack(pagetable_t);    // allocate kernel stack
+void            kpminithart(pagetable_t);      // set kernel page table on cpu
+void            kpmclear(pagetable_t ,uint64); // for cleaning all the mapping 
+void            kpmclearuser(pagetable_t,uint64); // for cleaning user page 
+uint64          kpmclearemptypte(pagetable_t);
+uint64          kpmcopy(pagetable_t,pagetable_t,uint64); //copy the user mapping to kernel. no physical 
+uint64          kpmshrink(pagetable_t,uint64);
 void            uvminit(pagetable_t, uchar *, uint);
 uint64          uvmalloc(pagetable_t, uint64, uint64);
 uint64          uvmdealloc(pagetable_t, uint64, uint64);
@@ -181,6 +185,7 @@ void            uvmclear(pagetable_t, uint64);
 uint64          walkaddr(pagetable_t, uint64);
 int             copyout(pagetable_t, uint64, char *, uint64);
 int             copyin(pagetable_t, char *, uint64, uint64);
+int             copyin_new(pagetable_t, char *, uint64, uint64);
 int             copyinstr(pagetable_t, char *, uint64, uint64);
 void            vmprint(pagetable_t);
 void            vmprint_recursive(pagetable_t, int);
