@@ -169,7 +169,7 @@ uint64          kpmstack(pagetable_t);    // allocate kernel stack
 void            kpminithart(pagetable_t);      // set kernel page table on cpu
 void            kpmclear(pagetable_t ,uint64); // for cleaning all the mapping 
 void            kpmclearuser(pagetable_t,uint64); // for cleaning user page 
-uint64          kpmclearemptypte(pagetable_t);
+uint64          kpmclearemptypte(pagetable_t,uint64);
 uint64          kpmcopy(pagetable_t,pagetable_t,uint64); //copy the user mapping to kernel. no physical 
 uint64          kpmshrink(pagetable_t,uint64);
 void            uvminit(pagetable_t, uchar *, uint);
@@ -188,6 +188,7 @@ int             copyin(pagetable_t, char *, uint64, uint64);
 int             copyin_new(pagetable_t, char *, uint64, uint64);
 int             copyinstr(pagetable_t, char *, uint64, uint64);
 void            vmprint(pagetable_t);
+// void            vmprint_sizeable(pagetable_t, uint64);
 void            vmprint_recursive(pagetable_t, int);
 
 // plic.c

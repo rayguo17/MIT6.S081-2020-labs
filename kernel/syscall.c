@@ -14,7 +14,8 @@ fetchaddr(uint64 addr, uint64 *ip)
   struct proc *p = myproc();
   if(addr >= p->sz || addr+sizeof(uint64) > p->sz)
     return -1;
-  vmprint()
+  // vmprint(p->kpage_table);
+  // vmprint(p->pagetable);
   if(copyin(p->pagetable, (char *)ip, addr, sizeof(*ip)) != 0)
     return -1;
   return 0;

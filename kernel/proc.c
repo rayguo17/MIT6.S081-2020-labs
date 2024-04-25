@@ -229,6 +229,8 @@ userinit(void)
   uvminit(p->pagetable, initcode, sizeof(initcode));
   p->sz = PGSIZE;
   kpmcopy(p->pagetable,p->kpage_table,p->sz);
+  //try to get things in
+  
   // prepare for the very first "return" from kernel to user.
   p->trapframe->epc = 0;      // user program counter
   p->trapframe->sp = PGSIZE;  // user stack pointer

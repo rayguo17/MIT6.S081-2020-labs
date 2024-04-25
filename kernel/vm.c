@@ -367,11 +367,28 @@ void kpmclear(pagetable_t page_table,uint64 stack_va)
 void kpmclearuser(pagetable_t page_table, uint64 sz)
 {
   // only need to dereference
+  // pagetable_t sub_pgt;
+  // pte_t pte;
+  // uint64 i;
+
   if (sz>0)
     uvmunmap(page_table,0,PGROUNDUP(sz)/PGSIZE,0);
+  //vmprint(page_table);
+  // pte = page_table[0];
+
+  // sub_pgt = (pagetable_t)PTE2PA(pte);
+  // for(i=0;i<16;i++){
+  //   pte = sub_pgt[i];
+  //   if(pte & PTE_V){
+  //     kfree((void *)PTE2PA(sub_pgt[i]));
+  //     sub_pgt[i] = 0;
+  //   }
+    
+  // }
   
 }
 
+// should also set the permission
 uint64 kpmcopy(pagetable_t src_pagetable,pagetable_t target_pagetable,uint64 sz)
 {
   pte_t *pte;
@@ -379,7 +396,10 @@ uint64 kpmcopy(pagetable_t src_pagetable,pagetable_t target_pagetable,uint64 sz)
   uint flags;
   for (i=0;i<sz;i+=PGSIZE){
     if((pte = walk(target_pagetable,i,0)))
-      continue;
+      if(*pte & PTE_V){
+        continue;
+      }
+        
     if((pte=walk(src_pagetable,i,0))==0)
       panic("uvmcopy: pte should exist");
     
@@ -387,6 +407,7 @@ uint64 kpmcopy(pagetable_t src_pagetable,pagetable_t target_pagetable,uint64 sz)
       panic("uvmcopy: page not present");
     pa = PTE2PA(*pte);
     flags = PTE_FLAGS(*pte);
+    flags = flags & (PTE_R|PTE_V|PTE_W|PTE_X);
     if(mappages(target_pagetable,i,PGSIZE,pa,flags)!=0){
       goto err;
     }
@@ -413,24 +434,23 @@ uint64 kpmshrink(pagetable_t page_table, uint64 sz)
   return 0;
 }
 
-uint64 kpmclearemptypte(pagetable_t page_table)
+uint64 kpmclearemptypte(pagetable_t page_table,uint64 level)
 {
   //TODO: Not done yet minor efficient.
   for (int i=0;i<512;i++){
     pte_t pte = page_table[i];
-    if((pte & PTE_V) && (pte & (PTE_R|PTE_W|PTE_X))){
-      //this is child
+    if(pte & PTE_V && level>=2){
       return 1;
-    }else if(pte & PTE_V){
-      //this is sub pagetable
-      uint64 child = PTE2PA(pte);
+    }else{
+      if (level<2){
+        uint64 child = PTE2PA(pte);
 
-      if(kpmclearemptypte((pagetable_t)child)==0){
-        //contain no valid child, 
-        kfree((void *)child);
-      }    
+        if(kpmclearemptypte((pagetable_t)child,level+1)==0){
+          //contain no valid child, 
+          kfree((void *)child);
+        }
+      }
     }
-
   }
   return 0;
 }
@@ -576,12 +596,19 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
     return -1;
   }
 }
+void vmprint_sizeable(pagetable_t page_table, uint64 sz)
+{
+  
+}
 
 void vmprint_recursive(pagetable_t tp, int level)
 {
   char buffer[9];
   // should dive into each pte
   for(int i=0;i<512;i++){
+    if (level<=1 && i>=1){
+      break;
+    }
 
     pte_t pte = tp[i];
     // how to know which pte is valid?
