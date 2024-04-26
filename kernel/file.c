@@ -134,13 +134,13 @@ fileread(struct file *f, uint64 addr, int n)
 int
 filewrite(struct file *f, uint64 addr, int n)
 {
-  struct proc *pr;
+  //struct proc *pr;
   int r, ret = 0;
   
-  pr = myproc();
+  //pr = myproc();
   
-  vmprint(pr->pagetable);
-  vmprint(pr->kpage_table);
+  // vmprint(pr->pagetable);
+  // vmprint(pr->kpage_table);
 
   if(f->writable == 0)
     return -1;

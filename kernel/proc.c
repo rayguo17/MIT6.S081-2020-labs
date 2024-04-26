@@ -143,6 +143,7 @@ freeproc(struct proc *p)
   p->trapframe = 0;
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
+  kpmclearuser(p->kpage_table,p->sz);
   if(p->kpage_table)  
     kpmclear(p->kpage_table,p->kstack);
   p->kpage_table = 0;
@@ -286,11 +287,19 @@ fork(void)
     release(&np->lock);
     return -1;
   }
-  if(kpmcopy(p->pagetable, np->kpage_table, p->sz) < 0){
+  if(kpmcopy(np->pagetable, np->kpage_table, p->sz) < 0){
     freeproc(np);
     release(&np->lock);
     return -1;
   }
+  // if(p->pid == 2){
+  //   printf("original pagetable\n");
+  //   vmprint(p->pagetable);
+  //   printf("new pagetable\n");
+  //   vmprint(np->pagetable);
+  //   printf("new kernel page table\n");
+  //   vmprint(np->kpage_table);
+  // }
   np->sz = p->sz;
 
   np->parent = p;

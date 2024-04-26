@@ -39,7 +39,7 @@ exec(char *path, char **argv)
     goto bad;
   kpmclearuser(p->kpage_table,p->sz);
   //kpmclearemptypte(p->kpage_table,0);
-  vmprint(p->kpage_table);
+  //vmprint(p->kpage_table);
   // Load program into memory.
   for(i=0, off=elf.phoff; i<elf.phnum; i++, off+=sizeof(ph)){
     if(readi(ip, 0, (uint64)&ph, off, sizeof(ph)) != sizeof(ph))
@@ -78,11 +78,11 @@ exec(char *path, char **argv)
   uvmclear(pagetable, sz-2*PGSIZE);
   sp = sz;
   stackbase = sp - PGSIZE;
-  vmprint(pagetable);
+  //vmprint(pagetable);
   //copy the new userpage to kernel page.
   if(kpmcopy(pagetable, p->kpage_table, sz) < 0)
     goto bad;
-  vmprint(p->kpage_table);
+  //vmprint(p->kpage_table);
   // Push argument strings, prepare rest of stack in ustack.
   for(argc = 0; argv[argc]; argc++) {
     if(argc >= MAXARG)
@@ -124,8 +124,8 @@ exec(char *path, char **argv)
   p->trapframe->sp = sp; // initial stack pointer
   proc_freepagetable(oldpagetable, oldsz);
 
-  if(p->pid==1)
-    vmprint(p->pagetable);
+  // if(p->pid==1)
+  //   vmprint(p->pagetable);
 
   return argc; // this ends up in a0, the first argument to main(argc, argv)
 

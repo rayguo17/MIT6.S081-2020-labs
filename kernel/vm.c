@@ -561,19 +561,24 @@ copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 int
 copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
 {
+  //return copyinstr_new(pagetable,dst,srcva,max);
   uint64 n, va0, pa0;
   int got_null = 0;
-
   while(got_null == 0 && max > 0){
     va0 = PGROUNDDOWN(srcva);
     pa0 = walkaddr(pagetable, va0);
     if(pa0 == 0)
       return -1;
+    
     n = PGSIZE - (srcva - va0);
     if(n > max)
       n = max;
 
     char *p = (char *) (pa0 + (srcva - va0));
+    // if(*p == 'l'){
+    //   vmprint(pagetable);
+    //   vmprint(np->kpage_table);
+    // }
     while(n > 0){
       if(*p == '\0'){
         *dst = '\0';
